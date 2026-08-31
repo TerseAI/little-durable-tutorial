@@ -1,0 +1,6 @@
+node_modules/
+.env
+.journal/
+targetRepo/
+.impeccable/
+.DS_Store
