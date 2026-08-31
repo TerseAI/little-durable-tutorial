@@ -24,7 +24,7 @@ export function fixIssuesInRepoWorkflow({}: WorkflowOptions): WorkflowDefinition
         },
         run: async ({ githubUrl }) =>
           await runCommand(
-            `mkdir -p targetRepo && ${git(`clone ${githubUrl} targetRepo`)}`,
+            `rm -rf targetRepo && ${git(`clone ${githubUrl} targetRepo`)}`,
           ),
       });
 
