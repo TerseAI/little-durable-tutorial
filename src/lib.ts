@@ -1,29 +1,33 @@
-import chalk from "chalk";
 import type { Sandbox, SandboxExecParams } from "modal";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { OUTPUT_INDENT, printCommand } from "./tutorial-output.js";
 
 export async function runCommand(command: string): Promise<RunCommandResult> {
-  console.log(chalk.dim(`$ ${redact(command)}`));
+  printCommand(redact(command));
   const child = spawn(command, { shell: true });
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
 
   let stdout = "";
   let stderr = "";
+  const out = prefixWriter(process.stdout, OUTPUT_INDENT);
+  const err = prefixWriter(process.stderr, OUTPUT_INDENT);
   child.stdout.on("data", (chunk: string) => {
     stdout += chunk;
-    process.stdout.write(chunk);
+    out.write(chunk);
   });
   child.stderr.on("data", (chunk: string) => {
     stderr += chunk;
-    process.stderr.write(chunk);
+    err.write(chunk);
   });
 
   const code = await new Promise<number | null>((resolve, reject) => {
     child.on("error", reject);
     child.on("close", resolve);
   });
+  out.flush();
+  err.flush();
   if (code !== 0) {
     throw new Error(
       `Command failed (exit ${code}): ${redact(command)}\n${stderr}`,

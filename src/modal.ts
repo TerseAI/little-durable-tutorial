@@ -1,15 +1,47 @@
-import chalk from "chalk";
 import "dotenv/config";
 import { ModalClient } from "modal";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { copyToSandbox, runSandboxCommand } from "./lib.js";
-
-const log = (message: string) => console.log(chalk.cyan(`[modal] ${message}`));
+import {
+  OUTPUT_INDENT,
+  printProblem,
+  printSandboxDone,
+  printSandboxStep,
+  printSection,
+  printTutorialHeader,
+  printUsage,
+} from "./tutorial-output.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const [githubUrl, issue] = process.argv.slice(2);
+if (!githubUrl || !issue) {
+  printUsage({
+    message: "A repository URL and issue description are required.",
+    command:
+      'npm run modal -- https://github.com/your-user/your-repo "Describe the issue to fix"',
+  });
+  process.exit(1);
+}
+
+const githubToken = process.env.GITHUB_TOKEN;
+if (!githubToken) {
+  printProblem(
+    "GitHub authentication is missing",
+    "GITHUB_TOKEN is not set.",
+    "Add GITHUB_TOKEN to .env, then run the command again.",
+  );
+  process.exit(1);
+}
+
+const runId = process.env.RUN_ID ?? "run-123";
+printTutorialHeader({ repository: githubUrl, runId });
+
+printSandboxStep(
+  "Preparing Modal resources",
+  "App: little-durable-tutorial · Volume: little-durable-work",
+);
 const modal = new ModalClient();
-log("connecting to app little-durable-tutorial");
 const app = await modal.apps.fromName("little-durable-tutorial", {
   createIfMissing: true,
 });
@@ -23,44 +55,46 @@ const image = modal.images
     "RUN curl -fsSL https://claude.ai/install.sh | bash",
     "ENV PATH=/root/.local/bin:$PATH",
   ]);
+printSandboxDone("Modal resources ready");
 
-const [githubUrl, issue] = process.argv.slice(2);
-if (!githubUrl || !issue) {
-  throw new Error("usage: npm run modal -- <github-url> <issue>");
-}
-
-const githubToken = process.env.GITHUB_TOKEN;
-if (!githubToken) throw new Error("GITHUB_TOKEN is required");
-
-log("creating sandbox (node:22 + claude, volume little-durable-work at /work)");
+printSandboxStep(
+  "Creating sandbox",
+  "Node.js 22 + Claude Code · durable journal mounted at /work",
+);
 const sb = await modal.sandboxes.create(app, image, {
   volumes: { "/work": volume },
   timeoutMs: 30 * 60 * 1000,
 });
+printSandboxDone("Sandbox ready");
 
 let runError: unknown;
 try {
-  log("copying project files into sandbox /app");
+  printSandboxStep("Copying tutorial files", "Destination: /app");
   await copyToSandbox(sb, root, [
     "package.json",
     "tsconfig.json",
     "src/lib.ts",
     "src/sample-workflow.ts",
+    "src/tutorial-output.ts",
   ]);
-  log("installing dependencies in sandbox /app");
+  printSandboxDone("Tutorial files copied");
+
+  printSandboxStep("Installing dependencies", "Working directory: /app");
   await runSandboxCommand(sb, ["npm", "install"], {
     workdir: "/app",
-    prefix: "[modal npm] ",
+    prefix: OUTPUT_INDENT,
   });
+  printSandboxDone("Dependencies installed");
 
   const secretEntries: Record<string, string> = { GITHUB_TOKEN: githubToken };
   if (process.env.ANTHROPIC_API_KEY) {
     secretEntries.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
   }
 
-  const runId = process.env.RUN_ID ?? "run-123";
-  log(`starting workflow in sandbox (RUN_ID=${runId})`);
-  log("---------- everything below is the workflow ----------");
+  printSection(
+    "Workflow output",
+    "The lines below come from src/sample-workflow.ts inside the sandbox.",
+  );
   await runSandboxCommand(
     sb,
     ["npx", "tsx", "src/sample-workflow.ts", githubUrl, issue],
@@ -80,20 +114,38 @@ try {
 } catch (error) {
   runError = error;
 }
-log("---------- back in modal ----------");
+
+printSection(
+  "Sandbox cleanup",
+  "The journal is saved even when a workflow step fails.",
+);
 
 // A v2 Volume only persists writes when `sync` runs on the mountpoint, and the
 // journal lives there. Flush it even when the run failed, otherwise resuming
 // replays a stale journal.
 try {
-  log("flushing journal to volume (sync /work)");
-  await runSandboxCommand(sb, ["sync", "/work"], { prefix: "[modal sync] " });
+  printSandboxStep("Saving durable journal", "Syncing /work to the Modal Volume");
+  await runSandboxCommand(sb, ["sync", "/work"], { prefix: OUTPUT_INDENT });
+  printSandboxDone("Journal saved");
 } catch (error) {
   if (!runError) throw error;
-  log(`sync /work failed: ${error}`);
+  printProblem("Journal could not be saved", error);
 } finally {
-  log("terminating sandbox");
+  printSandboxStep("Stopping sandbox");
   await sb.terminate();
+  printSandboxDone("Sandbox stopped");
 }
 
-if (runError) throw runError;
+if (runError) {
+  printProblem(
+    "Tutorial run did not finish",
+    runError,
+    `Fix the reported problem, then run the same command with RUN_ID=${runId} to resume.`,
+  );
+  process.exitCode = 1;
+} else {
+  printSandboxDone(
+    "Tutorial run finished",
+    `Run ${runId} is saved. Choose a new RUN_ID to start from the beginning.`,
+  );
+}

@@ -1,136 +1,116 @@
-olimorissette@MacBook-Air-3 little-durable-tutorial % npm run modal
+$ npm run modal -- https://github.com/your-user/your-repo "Fix the README typo"
 
-> little-durable-tutorial@1.0.0 modal
-> tsx src/modal.ts
+little-durable + Modal
+Run a coding agent as a durable workflow
 
+Repository  https://github.com/your-user/your-repo
+Run ID      run-123
+────────────────────────────────────────────────────────────────────────
+[sandbox]   Preparing Modal resources
+            App: little-durable-tutorial · Volume: little-durable-work
+[done]      Modal resources ready
+[sandbox]   Creating sandbox
+            Node.js 22 + Claude Code · durable journal mounted at /work
+[done]      Sandbox ready
+[sandbox]   Copying tutorial files
+            Destination: /app
+[done]      Tutorial files copied
+[sandbox]   Installing dependencies
+            Working directory: /app
+            added 53 packages, and audited 54 packages in 4s
+            found 0 vulnerabilities
+[done]      Dependencies installed
 
-added 53 packages, and audited 54 packages in 4s
+Workflow output
+The lines below come from src/sample-workflow.ts inside the sandbox.
+────────────────────────────────────────────────────────────────────────
+[run]       Started auto-fix-issues-in-repo
+            Run ID: run-123
 
-7 packages are looking for funding
-  run `npm fund` for details
+[step]      Clone repo
+[command]   $ rm -rf targetRepo && git clone https://github.com/your-user/your-repo targetRepo
+            Cloning into 'targetRepo'...
+[done]      Clone repo · 980 ms
 
-found 0 vulnerabilities
+[step]      Install dependencies
+[command]   $ cd targetRepo && npm install
+            added 52 packages, and audited 53 packages in 6s
+[done]      Install dependencies · 6.8 s
 
-{
-  type: 'runtime.started',
-  runId: 'run-123',
-  workflowName: 'fix-issues-in-repo',
-  startedAt: '2026-08-31T23:00:03.184Z'
-}
-{
-  type: 'step.started',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K0',
-  name: 'Clone repo',
-  startedAt: '2026-08-31T23:00:03.195Z'
-}
-{
-  type: 'step.completed',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K0',
-  name: 'Clone repo',
-  completedAt: '2026-08-31T23:00:04.175Z',
-  durationMs: 980
-}
-{
-  type: 'step.started',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K1',
-  name: 'Install dependencies',
-  startedAt: '2026-08-31T23:00:04.182Z'
-}
-{
-  type: 'step.completed',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K1',
-  name: 'Install dependencies',
-  completedAt: '2026-08-31T23:00:11.024Z',
-  durationMs: 6842
-}
-{
-  type: 'step.started',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K2',
-  name: 'Run claude code',
-  startedAt: '2026-08-31T23:00:11.030Z'
-}
-{
-  type: 'step.failed',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K2',
-  name: 'Run claude code',
-  failedAt: '2026-08-31T23:00:11.040Z',
-  durationMs: 10,
-  error: {
-    name: 'Error',
-    message: 'Command failed: cd targetRepo && claude -p --bare --allowedTools "Read,Edit,Bash" --permission-mode dontAsk "Create a fix for this issue: There is a typo  Do not commit the changes or try to push them to the repo" "\n' +
-      '/bin/sh: 1: Syntax error: Unterminated quoted string\n'
-  }
-}
-{
-  type: 'runtime.failed',
-  runId: 'run-123',
-  failedAt: '2026-08-31T23:00:11.044Z',
-  durationMs: 7860,
-  error: {
-    name: 'Error',
-    message: 'Command failed: cd targetRepo && claude -p --bare --allowedTools "Read,Edit,Bash" --permission-mode dontAsk "Create a fix for this issue: There is a typo  Do not commit the changes or try to push them to the repo" "\n' +
-      '/bin/sh: 1: Syntax error: Unterminated quoted string\n'
-  }
-}
+[step]      Run Claude Code
+[command]   $ cd targetRepo && claude -p ...
+            /bin/sh: 1: Syntax error: Unterminated quoted string
+[failed]    Run Claude Code · 10 ms
+            Command failed: cd targetRepo && claude -p ...
 
-olimorissette@MacBook-Air-3 little-durable-tutorial % npm run modal
+[failed]    Workflow stopped after 7.9 s
+            Command failed: cd targetRepo && claude -p ...
+            Fix the error, then run the command again with RUN_ID=run-123 to continue from the failed step.
 
-> little-durable-tutorial@1.0.0 modal
-> tsx src/modal.ts
+Sandbox cleanup
+The journal is saved even when a workflow step fails.
+────────────────────────────────────────────────────────────────────────
+[sandbox]   Saving durable journal
+            Syncing /work to the Modal Volume
+[done]      Journal saved
+[sandbox]   Stopping sandbox
+[done]      Sandbox stopped
+[failed]    Tutorial run did not finish
+            Fix the reported problem, then run the same command with RUN_ID=run-123 to resume.
 
 
-added 53 packages, and audited 54 packages in 5s
+# After fixing the cause, run the same command again.
 
-7 packages are looking for funding
-  run `npm fund` for details
+$ npm run modal -- https://github.com/your-user/your-repo "Fix the README typo"
 
-found 0 vulnerabilities
+little-durable + Modal
+Run a coding agent as a durable workflow
 
-{
-  type: 'runtime.resumed',
-  runId: 'run-123',
-  workflowName: 'fix-issues-in-repo',
-  resumedAt: '2026-08-31T23:03:03.609Z'
-}
-{
-  type: 'step.started',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K2',
-  name: 'Run claude code',
-  startedAt: '2026-08-31T23:03:03.628Z'
-}
-{
-  type: 'step.completed',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K2',
-  name: 'Run claude code',
-  completedAt: '2026-08-31T23:04:38.113Z',
-  durationMs: 94485
-}
-{
-  type: 'step.started',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K3',
-  name: 'commit and push on new branch',
-  startedAt: '2026-08-31T23:04:38.133Z'
-}
-{
-  type: 'step.completed',
-  runId: 'run-123',
-  stepId: 'step_01M1D0T6FG6YR9RF1E6NAZG7K3',
-  name: 'commit and push on new branch',
-  completedAt: '2026-08-31T23:04:39.997Z',
-  durationMs: 1864
-}
-{
-  type: 'runtime.completed',
-  runId: 'run-123',
-  completedAt: '2026-08-31T23:04:40.003Z',
-  durationMs: 276819
-}
+Repository  https://github.com/your-user/your-repo
+Run ID      run-123
+────────────────────────────────────────────────────────────────────────
+[sandbox]   Preparing Modal resources
+            App: little-durable-tutorial · Volume: little-durable-work
+[done]      Modal resources ready
+[sandbox]   Creating sandbox
+            Node.js 22 + Claude Code · durable journal mounted at /work
+[done]      Sandbox ready
+[sandbox]   Copying tutorial files
+            Destination: /app
+[done]      Tutorial files copied
+[sandbox]   Installing dependencies
+            Working directory: /app
+            added 53 packages, and audited 54 packages in 4s
+            found 0 vulnerabilities
+[done]      Dependencies installed
+
+Workflow output
+The lines below come from src/sample-workflow.ts inside the sandbox.
+────────────────────────────────────────────────────────────────────────
+[run]       Resumed auto-fix-issues-in-repo
+            Run ID: run-123 · completed steps will not run again
+
+[step]      Run Claude Code
+[command]   $ cd targetRepo && claude -p ...
+[done]      Run Claude Code · 1 min 34 s
+
+[step]      Commit and push a new branch
+[command]   $ cd targetRepo && git checkout -b fix-Fix-the-README-typo
+[command]   $ cd targetRepo && git add .
+[command]   $ cd targetRepo && git commit -m "Fix issue: Fix the README typo"
+[command]   $ cd targetRepo && git push -u origin fix-Fix-the-README-typo
+[done]      Commit and push a new branch · 1.9 s
+
+[done]      Workflow completed in 4 min 37 s
+            Run run-123 is fully complete.
+
+Sandbox cleanup
+The journal is saved even when a workflow step fails.
+────────────────────────────────────────────────────────────────────────
+[sandbox]   Saving durable journal
+            Syncing /work to the Modal Volume
+[done]      Journal saved
+[sandbox]   Stopping sandbox
+[done]      Sandbox stopped
+[done]      Tutorial run finished
+            Run run-123 is saved. Choose a new RUN_ID to start from the beginning.

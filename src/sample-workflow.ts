@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import type { WorkflowDefinition } from "little-durable";
 import {
   defineWorkflow,
@@ -10,6 +9,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { git, runCommand } from "./lib.js";
+import { printUsage, printWorkflowEvents } from "./tutorial-output.js";
 
 export function fixIssuesInRepoWorkflow({}: WorkflowOptions): WorkflowDefinition<
   typeof NewIssueSchema
@@ -36,7 +36,7 @@ export function fixIssuesInRepoWorkflow({}: WorkflowOptions): WorkflowDefinition
       });
 
       await step({
-        name: "Run claude code",
+        name: "Run Claude Code",
         input: {
           issue: input.issue,
         },
@@ -47,7 +47,7 @@ export function fixIssuesInRepoWorkflow({}: WorkflowOptions): WorkflowDefinition
       });
 
       await step({
-        name: "commit and push on new branch",
+        name: "Commit and push a new branch",
         input: {},
         run: async () => {
           const branchName = `fix-${input.issue.replace(/ /g, "-")}`;
@@ -92,7 +92,12 @@ const runtime = new Runtime({
 
 const [githubUrl, issue] = process.argv.slice(2);
 if (!githubUrl || !issue) {
-  throw new Error("usage: tsx src/sample-workflow.ts <github-url> <issue>");
+  printUsage({
+    message: "A repository URL and issue description are required.",
+    command:
+      'npm run workflow -- https://github.com/your-user/your-repo "Describe the issue to fix"',
+  });
+  process.exit(1);
 }
 
 const runId = process.env.RUN_ID ?? "run-1";
@@ -105,21 +110,4 @@ const events = existing
       input: { githubUrl, issue },
     });
 
-for await (const event of events) {
-  if (event.type === "step.started") {
-    console.log(`\n${chalk.green.bold(`▶ ${event.name}`)}`);
-  } else if (event.type === "step.completed") {
-    console.log(
-      chalk.green(`✔ ${event.name} ${chalk.dim(`(${event.durationMs}ms)`)}`),
-    );
-  } else if (event.type === "step.failed") {
-    console.log(chalk.red(`✖ ${event.name}: ${event.error.message}`));
-  } else {
-    console.log(chalk.dim(`[${event.type}]`));
-  }
-
-  if (event.type === "runtime.suspended") {
-    // Reach out to your control plane and schedule the run to resume.
-    console.log(chalk.yellow("Workflow suspended"), event.suspension);
-  }
-}
+await printWorkflowEvents(events);
