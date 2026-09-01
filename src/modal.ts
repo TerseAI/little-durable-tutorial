@@ -1,10 +1,11 @@
+import chalk from "chalk";
 import "dotenv/config";
 import { ModalClient } from "modal";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { copyToSandbox, runSandboxCommand } from "./lib.js";
 
-const log = (message: string) => console.log(`[modal] ${message}`);
+const log = (message: string) => console.log(chalk.cyan(`[modal] ${message}`));
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const modal = new ModalClient();
@@ -69,6 +70,8 @@ try {
         WORK_DIR: "/work",
         JOURNAL_DIR: "/work/journal",
         RUN_ID: runId,
+        // chalk only colorizes a TTY, and the sandbox output is piped back here.
+        FORCE_COLOR: "1",
       },
       secrets: [await modal.secrets.fromObject(secretEntries)],
       pty: true,

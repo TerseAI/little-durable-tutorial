@@ -1,9 +1,10 @@
+import chalk from "chalk";
 import type { Sandbox, SandboxExecParams } from "modal";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 
 export async function runCommand(command: string): Promise<RunCommandResult> {
-  console.log(`$ ${redact(command)}`);
+  console.log(chalk.dim(`$ ${redact(command)}`));
   const child = spawn(command, { shell: true });
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");

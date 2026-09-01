@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import type { WorkflowDefinition } from "little-durable";
 import {
   defineWorkflow,
@@ -106,17 +107,19 @@ const events = existing
 
 for await (const event of events) {
   if (event.type === "step.started") {
-    console.log(`\n[step] ${event.name}`);
+    console.log(`\n${chalk.green.bold(`▶ ${event.name}`)}`);
   } else if (event.type === "step.completed") {
-    console.log(`[done] ${event.name} (${event.durationMs}ms)`);
+    console.log(
+      chalk.green(`✔ ${event.name} ${chalk.dim(`(${event.durationMs}ms)`)}`),
+    );
   } else if (event.type === "step.failed") {
-    console.log(`[fail] ${event.name}: ${event.error.message}`);
+    console.log(chalk.red(`✖ ${event.name}: ${event.error.message}`));
   } else {
-    console.log(`[${event.type}]`);
+    console.log(chalk.dim(`[${event.type}]`));
   }
 
   if (event.type === "runtime.suspended") {
     // Reach out to your control plane and schedule the run to resume.
-    console.log("Workflow suspended", event.suspension);
+    console.log(chalk.yellow("Workflow suspended"), event.suspension);
   }
 }
