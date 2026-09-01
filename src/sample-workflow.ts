@@ -14,7 +14,7 @@ export function fixIssuesInRepoWorkflow({}: WorkflowOptions): WorkflowDefinition
   typeof NewIssueSchema
 > {
   return defineWorkflow({
-    name: "fix-issues-in-repo",
+    name: "auto-fix-issues-in-repo",
     input: NewIssueSchema,
     run: async (input) => {
       await step({
@@ -94,7 +94,7 @@ if (!githubUrl || !issue) {
   throw new Error("usage: tsx src/sample-workflow.ts <github-url> <issue>");
 }
 
-const runId = process.env.RUN_ID ?? "run-123";
+const runId = process.env.RUN_ID ?? "run-1";
 const workflow = fixIssuesInRepoWorkflow({});
 const existing = await runtime.getRun({ runId }).catch(() => undefined);
 const events = existing
@@ -105,7 +105,15 @@ const events = existing
     });
 
 for await (const event of events) {
-  console.log(event);
+  if (event.type === "step.started") {
+    console.log(`\n[step] ${event.name}`);
+  } else if (event.type === "step.completed") {
+    console.log(`[done] ${event.name} (${event.durationMs}ms)`);
+  } else if (event.type === "step.failed") {
+    console.log(`[fail] ${event.name}: ${event.error.message}`);
+  } else {
+    console.log(`[${event.type}]`);
+  }
 
   if (event.type === "runtime.suspended") {
     // Reach out to your control plane and schedule the run to resume.

@@ -1,8 +1,9 @@
+import type { Sandbox, SandboxExecParams } from "modal";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import type { Sandbox, SandboxExecParams } from "modal";
 
 export async function runCommand(command: string): Promise<RunCommandResult> {
+  console.log(`$ ${redact(command)}`);
   const child = spawn(command, { shell: true });
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
@@ -23,9 +24,15 @@ export async function runCommand(command: string): Promise<RunCommandResult> {
     child.on("close", resolve);
   });
   if (code !== 0) {
-    throw new Error(`Command failed (exit ${code}): ${command}\n${stderr}`);
+    throw new Error(
+      `Command failed (exit ${code}): ${redact(command)}\n${stderr}`,
+    );
   }
   return { stdout, stderr };
+}
+
+function redact(command: string): string {
+  return command.replace(/basic [\w+/=]+/gi, "basic ***");
 }
 
 export function git(args: string): string {
@@ -50,23 +57,47 @@ export async function copyToSandbox(
 export async function runSandboxCommand(
   sandbox: Sandbox,
   command: string[],
-  params?: SandboxExecParams & { mode?: "text" },
+  options?: SandboxExecParams & { mode?: "text"; prefix?: string },
 ): Promise<void> {
+  const { prefix, ...params } = options ?? {};
   const proc = await sandbox.exec(command, params);
+  const out = prefixWriter(process.stdout, prefix);
+  const err = prefixWriter(process.stderr, prefix);
   let stderr = "";
   const [code] = await Promise.all([
     proc.wait(),
-    drain(proc.stdout, (chunk) => process.stdout.write(chunk)),
+    drain(proc.stdout, out.write).finally(out.flush),
     drain(proc.stderr, (chunk) => {
       stderr += chunk;
-      process.stderr.write(chunk);
-    }),
+      err.write(chunk);
+    }).finally(err.flush),
   ]);
   if (code !== 0) {
     throw new Error(
       stderr || `Command failed (exit ${code}): ${command.join(" ")}`,
     );
   }
+}
+
+// Tags each line of sandbox output so it is obvious what modal printed and
+// what came from the workflow running inside the sandbox.
+function prefixWriter(target: NodeJS.WriteStream, prefix?: string) {
+  if (!prefix) {
+    return { write: (chunk: string) => void target.write(chunk), flush: () => {} };
+  }
+  let pending = "";
+  return {
+    write: (chunk: string) => {
+      pending += chunk;
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) target.write(`${prefix}${line}\n`);
+    },
+    flush: () => {
+      if (pending) target.write(`${prefix}${pending}\n`);
+      pending = "";
+    },
+  };
 }
 
 async function drain(
