@@ -33,6 +33,7 @@ const sb = await modal.sandboxes.create(app, image, {
   timeoutMs: 30 * 60 * 1000,
 });
 
+let runError: unknown;
 try {
   await copyToSandbox(sb, root, [
     "package.json",
@@ -61,6 +62,20 @@ try {
       pty: true,
     },
   );
+} catch (error) {
+  runError = error;
+}
+
+// A v2 Volume only persists writes when `sync` runs on the mountpoint, and the
+// journal lives there. Flush it even when the run failed, otherwise resuming
+// replays a stale journal.
+try {
+  await runSandboxCommand(sb, ["sync", "/work"]);
+} catch (error) {
+  if (!runError) throw error;
+  console.error("sync /work failed:", error);
 } finally {
   await sb.terminate();
 }
+
+if (runError) throw runError;
